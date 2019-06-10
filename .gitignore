@@ -5,3 +5,5 @@ release
 *.pro.user
 *.sln
 *.vcxproj*
+*.VC.*
+*.txt

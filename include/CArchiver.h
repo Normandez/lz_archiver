@@ -6,8 +6,6 @@
 
 #include <string>
 
-#include <vector>
-
 class CArchiver
 {
 public:

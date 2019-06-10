@@ -1,4 +1,4 @@
-CONFIG -= QT
+CONFIG -= qt
 
 INCL = include
 SRC = src
