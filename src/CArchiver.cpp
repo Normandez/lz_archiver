@@ -30,13 +30,15 @@ bool CArchiver::SetOutputFile( const std::string& output_file_name )
 
 void CArchiver::CompressLz77()
 {
-	// SB and LAB definition
+	// SB, LAB and SM definition
 	std::string search_buf;
 	std::string look_ahead_buf;
+	std::vector<short> search_mask;
 
-	// SB and LAB size setting
-	search_buf.reserve( s_search_buf_size );
+	// SB, LAB and SM size setting
+	search_buf.reserve(s_search_buf_size);
 	look_ahead_buf.reserve(s_look_ahead_buf_size);
+	search_mask.reserve(s_look_ahead_buf_size);
 
 	// File compressing loop
 	bool is_end_of_file = false;
