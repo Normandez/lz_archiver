@@ -7,3 +7,5 @@ release
 *.vcxproj*
 *.VC.*
 *.txt
+*.arch
+*.mp3

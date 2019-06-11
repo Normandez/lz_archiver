@@ -11,7 +11,7 @@ int main( int argc, char** argv )
 {
 	CArchiver archiver;
 
-	if( archiver.SetInputFile("C:/devel/LZArchiver/lz_archiver/input.txt") )
+	if( archiver.SetInputFile("C:/devel/LZArchiver/lz_archiver/input.txt") && archiver.SetOutputFile( "C:/devel/LZArchiver/lz_archiver/output.arch" ) )
 	{
 		archiver.CompressLz77();
 	}
