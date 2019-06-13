@@ -30,8 +30,6 @@ bool CArchiver::SetOutputFile( const std::string& output_file_name )
 
 void CArchiver::CompressLz77()
 {
-	using namespace std::string_literals;
-
 	// SB, LAB and SM definition
 	std::string search_buf;
 	std::string look_ahead_buf;
@@ -41,6 +39,10 @@ void CArchiver::CompressLz77()
 	search_buf.reserve(s_search_buf_size);
 	look_ahead_buf.reserve(s_look_ahead_buf_size);
 	search_mask.reserve(s_look_ahead_buf_size);
+
+	// Serialization components
+	CArchiver::SLz77SaveNode save_node;
+	char* serialized_node = new char[ sizeof(CArchiver::SLz77SaveNode) ];;
 
 	// File compressing loop
 	bool is_eof = false;
@@ -84,8 +86,10 @@ void CArchiver::CompressLz77()
 					}
 				}
 
-				// Ready compressed data
-				m_out_file_strm << "<" << offset_count << ", " << length_count << ", " << look_ahead_buf[length_count] << ">";
+				// Compressed data serialization and saving
+				save_node.Init( offset_count, length_count, look_ahead_buf[length_count] );
+				save_node.Serialize(serialized_node);
+				m_out_file_strm.write( serialized_node, sizeof(CArchiver::SLz77SaveNode) );
 
 				// Window shifting and SM flushing
 				std::string seek_str = look_ahead_buf.substr( 0, length_count + 1 );
@@ -108,11 +112,50 @@ void CArchiver::CompressLz77()
 			break;
 		}
 	}
+
+	delete[] serialized_node;
 }
 
 void CArchiver::DecompressLz77()
 {
+	// SB definition
+	std::string search_buf = "";
 
+	// SB size setting
+	search_buf.reserve(s_search_buf_size);
+
+	// Serialization components
+	CArchiver::SLz77SaveNode save_node;
+	char* serialized_node = new char[sizeof( CArchiver::SLz77SaveNode )];
+
+	// File decompressing loop
+	while( m_in_file_strm.read( serialized_node, sizeof( CArchiver::SLz77SaveNode ) ) )
+	{
+		// Deserialization
+		save_node.Deserialize(serialized_node);
+
+		// SB flush
+		if( ( search_buf.size() + save_node.m_length + 1 ) > s_search_buf_size )
+		{
+			m_out_file_strm << search_buf;
+			search_buf.clear();
+		}
+
+		// Decompression and SB shifting
+		std::string search_substr = "";
+		if(save_node.m_offset)
+		{
+			search_substr = search_buf.substr( save_node.m_offset - 1, -(save_node.m_length) );
+		}
+		search_substr += save_node.m_next_char;
+		std::reverse( search_substr.begin(), search_substr.end() );
+		search_buf.insert( 0, search_substr );
+	}
+
+	// SB flush
+	m_out_file_strm << search_buf;
+
+	delete[] serialized_node;
 }
 
 void CArchiver::CompressLz78()
