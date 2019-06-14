@@ -2,9 +2,10 @@
 
 namespace
 {
-	// Total window size = 32
+	// Total window size = 32000
 	static const size_t s_search_buf_size = 20000;
 	static const size_t s_look_ahead_buf_size = 12000;
+	static const size_t s_compression_rate = 64;
 }
 
 CArchiver::CArchiver()
@@ -33,16 +34,16 @@ void CArchiver::CompressLz77()
 	// SB, LAB and SM definition
 	std::string search_buf;
 	std::string look_ahead_buf;
-	std::vector<short> search_mask;
+	std::vector<long> search_mask;
 
 	// SB, LAB and SM size setting
 	search_buf.reserve(s_search_buf_size);
 	look_ahead_buf.reserve(s_look_ahead_buf_size);
-	search_mask.reserve(s_look_ahead_buf_size);
+	search_mask.reserve(s_compression_rate);
 
 	// Serialization components
 	CArchiver::SLz77SaveNode save_node;
-	char* serialized_node = new char[ sizeof(CArchiver::SLz77SaveNode) ];;
+	char* serialized_node = new char[ sizeof(CArchiver::SLz77SaveNode) ];
 
 	// File compressing loop
 	bool is_eof = false;
@@ -53,30 +54,31 @@ void CArchiver::CompressLz77()
 
 		if( look_ahead_buf.size() < s_look_ahead_buf_size && !is_eof )	// LAB fill
 		{
-			look_ahead_buf.push_back( m_in_file_strm.get() );
+			int read_ch = m_in_file_strm.get();
+			if( read_ch != -1 ) look_ahead_buf.push_back(read_ch);
 			continue;
 		}
 		else	// Compressing
 		{
-			short length_count, offset_count;
+			int length_count, offset_count;
 			std::string search_substr;
 			while( !look_ahead_buf.empty() )	// LAB flush
 			{
 				// SM (mask of matches) fill
-				for( size_t it = 0; it < look_ahead_buf.size(); it++ )
+				for( size_t it = 0; it < s_compression_rate; it++ )
 				{
 					search_substr = look_ahead_buf.substr( 0, it + 1 );
 					std::reverse( search_substr.begin(), search_substr.end() );
-					search_mask.push_back( ( search_buf.find( search_substr, 0 ) != -1 ) ? (short) ( search_buf.find( search_substr, 0 ) + search_substr.size() ) : 0 );
+					search_mask.push_back( ( search_buf.find( search_substr, 0 ) != -1 ) ? (long) ( search_buf.find( search_substr, 0 ) + search_substr.size() ) : 0 );
 				}
 
 				// SM read
-				for( short it = (short) look_ahead_buf.size() - 1; it >= 0; it-- )
+				for( long it = (long) ( s_compression_rate - 1 ); it >= 0; it-- )
 				{
 					if( search_mask.at(it) )
 					{
 						offset_count = search_mask.at(it);
-						length_count = (short) it + 1;
+						length_count = it + 1;
 						break;
 					}
 					else if( it == 0 )
@@ -87,9 +89,21 @@ void CArchiver::CompressLz77()
 				}
 
 				// Compressed data serialization and saving
-				save_node.Init( offset_count, length_count, look_ahead_buf[length_count] );
-				save_node.Serialize(serialized_node);
-				m_out_file_strm.write( serialized_node, sizeof(CArchiver::SLz77SaveNode) );
+				try
+				{
+					save_node.Init( offset_count, length_count, look_ahead_buf.at(length_count) );
+					save_node.Serialize(serialized_node);
+					m_out_file_strm.write( serialized_node, sizeof(CArchiver::SLz77SaveNode) );
+				}
+				catch(...)
+				{
+					for( char ch : look_ahead_buf )
+					{
+						save_node.Init( 0, 0, ch );
+						save_node.Serialize(serialized_node);
+						m_out_file_strm.write( serialized_node, sizeof(CArchiver::SLz77SaveNode) );
+					}
+				}
 
 				// Window shifting and SM flushing
 				std::string seek_str = look_ahead_buf.substr( 0, length_count + 1 );
@@ -122,7 +136,7 @@ void CArchiver::DecompressLz77()
 	std::string search_buf = "";
 
 	// SB size setting
-	search_buf.reserve(s_search_buf_size);
+	search_buf.reserve( 8 * s_search_buf_size );
 
 	// Serialization components
 	CArchiver::SLz77SaveNode save_node;
@@ -134,25 +148,35 @@ void CArchiver::DecompressLz77()
 		// Deserialization
 		save_node.Deserialize(serialized_node);
 
-		// SB flush
-		if( ( search_buf.size() + save_node.m_length + 1 ) > s_search_buf_size )
+		// Decompression
+		std::string search_substr = "";
+		if(save_node.m_offset)
 		{
+			int search_it = save_node.m_offset - 1;
+			int length_count = save_node.m_length;
+			while(length_count)
+			{
+				search_substr += search_buf[search_it--];
+				length_count--;
+			}
+		}
+		search_substr += save_node.m_next_char;
+		std::reverse( search_substr.begin(), search_substr.end() );
+
+		// SB overflow condition
+		if( ( search_buf.size() + save_node.m_length + 1 ) > 8 * s_search_buf_size )
+		{
+			std::reverse( search_buf.begin(), search_buf.end() );
 			m_out_file_strm << search_buf;
 			search_buf.clear();
 		}
 
-		// Decompression and SB shifting
-		std::string search_substr = "";
-		if(save_node.m_offset)
-		{
-			search_substr = search_buf.substr( save_node.m_offset - 1, -(save_node.m_length) );
-		}
-		search_substr += save_node.m_next_char;
-		std::reverse( search_substr.begin(), search_substr.end() );
+		// SB shifting
 		search_buf.insert( 0, search_substr );
 	}
 
 	// SB flush
+	std::reverse( search_buf.begin(), search_buf.end() );
 	m_out_file_strm << search_buf;
 
 	delete[] serialized_node;
