@@ -6,6 +6,9 @@ namespace
 	static const size_t s_search_buf_size = 20000;
 	static const size_t s_look_ahead_buf_size = 12000;
 	static const size_t s_compression_rate = 64;
+
+	static const size_t s_dict_reserve_size = 96000;
+	static const size_t s_input_buf_size = 32000;
 }
 
 CArchiver::CArchiver()
@@ -184,6 +187,50 @@ void CArchiver::DecompressLz77()
 
 void CArchiver::CompressLz78()
 {
+	std::vector<std::string> dict;
+	std::string input_buf;
+
+	dict.reserve(s_dict_reserve_size);
+	input_buf.reserve(s_input_buf_size);
+
+	// File compressing loop
+	bool is_eof = false;
+	while(true)
+	{
+		// EOF checking
+		is_eof = m_in_file_strm.eof();
+
+		if( input_buf.size() < s_input_buf_size && !is_eof )	// IB fill
+		{
+			int read_ch = m_in_file_strm.get();
+			if( read_ch != -1 ) input_buf.push_back(read_ch);
+			continue;
+		}
+		else	// Compressing
+		{
+			std::string search_substr;
+			while( !input_buf.empty() )	// IB flush
+			{
+				search_substr.push_back( input_buf.front() );
+				input_buf.erase( 0, 1 );
+				for( size_t count = 0; count < dict.size(); count++ )
+				{
+					if( dict[count] == search_substr )
+					{
+						dict.push_back( search_substr + input_buf.front() );
+						break;
+					}
+				}
+
+			}
+		}
+
+		// EOF handling (exit condition)
+		if(is_eof)
+		{
+			break;
+		}
+	}
 
 }
 
