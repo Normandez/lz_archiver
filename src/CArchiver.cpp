@@ -247,5 +247,30 @@ void CArchiver::CompressLz78()
 
 void CArchiver::DecompressLz78()
 {
+	// D(dictionary) def and init
+	std::vector<std::string> dict = {""};
 
+	// Serialization components
+	CArchiver::SLz78Node node;
+	char* serialized_node = new char[sizeof(CArchiver::SLz78Node)];
+
+	// Decompression loop
+	std::string buf = "";
+	while( m_in_file_strm.read( serialized_node, sizeof( CArchiver::SLz78Node ) ) )
+	{
+		// Deserialization
+		node.Deserialize(serialized_node);
+		
+		// Decode
+		buf = dict[node.dict_pos] + node.next_ch;
+
+		// Output saving
+		m_out_file_strm << buf;
+
+		// D filling
+		dict.push_back(buf);
+		buf.clear();
+	}
+
+	delete[] serialized_node;
 }
