@@ -6,6 +6,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 class CArchiver
 {
@@ -49,7 +50,7 @@ private:
 			*ch_it = this->m_next_char, ch_it++;
 		}
 
-		void Deserialize( char* serialized_str )
+		void Deserialize( const char* serialized_str )
 		{
 			int* int_it = (int*) serialized_str;
 			this->m_offset = *int_it, int_it++;
@@ -57,6 +58,36 @@ private:
 	
 			char* ch_it = (char*) int_it;
 			this->m_next_char = *ch_it, ch_it++;
+		}
+	};
+
+	struct SLz78Node
+	{
+		int dict_pos;
+		char next_ch;
+
+		void Init( int pos, char ch )
+		{
+			dict_pos = pos;
+			next_ch = ch;
+		}
+
+		void Serialize( char* serialized_line )
+		{
+			int* int_it = (int*) serialized_line;
+			*int_it = this->dict_pos, int_it++;
+
+			char* char_it = (char*) int_it;
+			*char_it = this->next_ch, char_it++;
+		}
+
+		void Deserialize( char* serialized_line )
+		{
+			int* int_it = (int*) serialized_line;
+			this->dict_pos = *int_it, int_it++;
+
+			char* char_it = (char*) int_it;
+			this->next_ch = *char_it, char_it++;
 		}
 	};
 

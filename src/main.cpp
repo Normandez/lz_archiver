@@ -11,9 +11,9 @@ int main( int argc, char** argv )
 {
 	CArchiver archiver;
 
-	if( archiver.SetInputFile("C:/devel/LZArchiver/lz_archiver/main_icon.ico.arch") && archiver.SetOutputFile( "C:/devel/LZArchiver/lz_archiver/main_icon_decompressed.ico" ) )
+	if( archiver.SetInputFile("C:/devel/LZArchiver/lz_archiver/input.txt") && archiver.SetOutputFile( "C:/devel/LZArchiver/lz_archiver/output.arch" ) )
 	{
-		archiver.DecompressLz77();
+		archiver.CompressLz78();
 	}
 
 	system("pause");

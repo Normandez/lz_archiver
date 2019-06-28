@@ -7,7 +7,6 @@ namespace
 	static const size_t s_look_ahead_buf_size = 12000;
 	static const size_t s_compression_rate = 64;
 
-	static const size_t s_dict_reserve_size = 96000;
 	static const size_t s_input_buf_size = 32000;
 }
 
@@ -187,20 +186,26 @@ void CArchiver::DecompressLz77()
 
 void CArchiver::CompressLz78()
 {
-	std::vector<std::string> dict;
+	// D(dictionary) and IB(input buffer) def
+	std::map<std::string, int> dict;
 	std::string input_buf;
 
-	dict.reserve(s_dict_reserve_size);
+	// D and IB init
+	dict.insert( { "", 0 } );
 	input_buf.reserve(s_input_buf_size);
 
-	// File compressing loop
+	// Serialization components
+	CArchiver::SLz78Node node;
+	char* serialized_node = new char[sizeof( CArchiver::SLz78Node )];
+
+	// File compression loop
 	bool is_eof = false;
 	while(true)
 	{
 		// EOF checking
 		is_eof = m_in_file_strm.eof();
 
-		if( input_buf.size() < s_input_buf_size && !is_eof )	// IB fill
+		if( input_buf.size() < s_input_buf_size && !is_eof )	// IB filling
 		{
 			int read_ch = m_in_file_strm.get();
 			if( read_ch != -1 ) input_buf.push_back(read_ch);
@@ -208,20 +213,25 @@ void CArchiver::CompressLz78()
 		}
 		else	// Compressing
 		{
-			std::string search_substr;
-			while( !input_buf.empty() )	// IB flush
+			std::string search_buf = "";
+			for( int it = 0; it <= input_buf.size() - 1; it++ )	// IB flushing
 			{
-				search_substr.push_back( input_buf.front() );
-				input_buf.erase( 0, 1 );
-				for( size_t count = 0; count < dict.size(); count++ )
+				// D searching
+				if( dict.find( search_buf + input_buf.at(it) ) != dict.end() )
 				{
-					if( dict[count] == search_substr )
-					{
-						dict.push_back( search_substr + input_buf.front() );
-						break;
-					}
+					search_buf += input_buf.at(it);
 				}
+				else
+				{
+					// Output writing
+					node.Init( dict[search_buf], input_buf.at(it) );
+					node.Serialize(serialized_node);
+					m_out_file_strm.write( serialized_node, sizeof(CArchiver::SLz78Node) );
 
+					// D filling
+					dict[search_buf + input_buf.at(it)] = (int) dict.size();
+					search_buf.clear();
+				}
 			}
 		}
 
@@ -232,6 +242,7 @@ void CArchiver::CompressLz78()
 		}
 	}
 
+	delete[] serialized_node;
 }
 
 void CArchiver::DecompressLz78()
