@@ -7,7 +7,8 @@ namespace
 	static const size_t s_look_ahead_buf_size = 12000;
 	static const size_t s_compression_rate = 64;
 
-	static const size_t s_input_buf_size = 32000;
+	// 32MB
+	static const size_t s_input_buf_size = 32768000;
 }
 
 CArchiver::CArchiver()
@@ -200,6 +201,7 @@ void CArchiver::CompressLz78()
 
 	// File compression loop
 	bool is_eof = false;
+	std::string search_buf = "";
 	while(true)
 	{
 		// EOF checking
@@ -213,26 +215,27 @@ void CArchiver::CompressLz78()
 		}
 		else	// Compressing
 		{
-			std::string search_buf = "";
 			for( int it = 0; it <= input_buf.size() - 1; it++ )	// IB flushing
 			{
 				// D searching
-				if( dict.find( search_buf + input_buf.at(it) ) != dict.end() )
+				if( dict.find( search_buf + input_buf[it] ) != dict.end() )
 				{
-					search_buf += input_buf.at(it);
+					search_buf += input_buf[it];
 				}
 				else
 				{
 					// Output writing
-					node.Init( dict[search_buf], input_buf.at(it) );
+					node.Init( dict[search_buf], input_buf[it] );
 					node.Serialize(serialized_node);
 					m_out_file_strm.write( serialized_node, sizeof(CArchiver::SLz78Node) );
 
 					// D filling
-					dict[search_buf + input_buf.at(it)] = (int) dict.size();
+					dict[search_buf + input_buf[it]] = (int) dict.size();
 					search_buf.clear();
 				}
 			}
+
+			input_buf.clear();
 		}
 
 		// EOF handling (exit condition)
@@ -256,6 +259,7 @@ void CArchiver::DecompressLz78()
 
 	// Decompression loop
 	std::string buf = "";
+	int size_cut_count = 0;
 	while( m_in_file_strm.read( serialized_node, sizeof( CArchiver::SLz78Node ) ) )
 	{
 		// Deserialization
