@@ -1,21 +1,18 @@
+#include "SLaunchOptions.h"
 #include "CArchiver.h"
-
-enum EArchiveMode
-{
-	EArchiveMode_Compress,
-	EArchiveMode_Decompress,
-	EArchiveMode_Size
-};
 
 int main( int argc, char** argv )
 {
-	CArchiver archiver;
+	SLaunchOptions launch_opt = ParseInputParams( argc, argv );
 
-	if( archiver.SetInputFile("C:/devel/LZArchiver/lz_archiver/image.jpg.arch") && archiver.SetOutputFile("C:/devel/LZArchiver/lz_archiver/image_decompressed.jpg") )
+	if(!launch_opt.m_is_valid)
 	{
-		archiver.DecompressLz78();
+		return 1;
 	}
+	else
+	{
+		CArchiver archiver;
 
-	system("pause");
-	return 0;
+
+	}
 }

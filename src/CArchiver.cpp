@@ -2,7 +2,7 @@
 
 namespace
 {
-	// Total window size = 32000
+	// Total window size = 32KB
 	static const size_t s_search_buf_size = 20000;
 	static const size_t s_look_ahead_buf_size = 12000;
 	static const size_t s_compression_rate = 64;
