@@ -278,7 +278,6 @@ void CArchiver::DecompressLz78()
 
 	// Decompression loop
 	std::string buf = "";
-	int size_cut_count = 0;
 	while( m_in_file_strm.read( serialized_node, sizeof( CArchiver::SLz78Node ) ) )
 	{
 		// Deserialization

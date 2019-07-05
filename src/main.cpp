@@ -28,7 +28,7 @@ int main( int argc, char** argv )
 		{
 			if( launch_opt.m_archive_type == EArchiveType_LZ77 )
 			{
-				archiver.CompressLz77(launch_opt.m_archive_rate);
+				archiver.CompressLz77(launch_opt.m_compression_rate);
 			}
 			else if( launch_opt.m_archive_type == EArchiveType_LZ78 )
 			{

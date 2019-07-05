@@ -33,7 +33,7 @@ struct SLaunchOptions
 	
 	EArchiveMode m_archive_mode;
 	EArchiveType m_archive_type = EArchiveType_LZ78;
-	ECompressionRate m_archive_rate = ECompressionRate_middle;
+	ECompressionRate m_compression_rate = ECompressionRate_middle;
 
 	std::string m_input_file;
 	std::string m_output_file = "";
@@ -53,17 +53,19 @@ SLaunchOptions ParseInputParams( int argc, char** argv )
 	{
 		for( size_t it = 1; it < argc; it++ )
 		{
-			if( it == 1 && argv[it] == "-c" )
+			std::string arg = argv[it];
+
+			if( it == 1 && arg == "-c" )
 			{
 				launch_opt.m_archive_mode = EArchiveMode_Compress;
 			}
-			else if( it == 1 && argv[it] == "-x" )
+			else if( it == 1 && arg == "-x" )
 			{
 				launch_opt.m_archive_mode = EArchiveMode_Extract;
 			}
 			else if( it == 2 )
 			{
-				launch_opt.m_input_file = argv[it];
+				launch_opt.m_input_file = arg;
 				if( launch_opt.m_archive_mode == EArchiveMode_Extract
 					&& launch_opt.m_input_file.compare( launch_opt.m_input_file.size() - 5, 5, s_archive_ext ) != 0 )
 				{
@@ -72,13 +74,13 @@ SLaunchOptions ParseInputParams( int argc, char** argv )
 					break;
 				}
 			}
-			else if( it == 3 && std::string(argv[it]).find("--output=") == 0 )
+			else if( std::string(arg).find("--output=") == 0 )
 			{
-				launch_opt.m_output_file = std::string(argv[it]).substr(9);
+				launch_opt.m_output_file = std::string(arg).substr(9);
 			}
-			else if( it == 4 && std::string(argv[it]).find("--type=") == 0 )
+			else if( std::string(arg).find("--type=") == 0 )
 			{
-				std::string type = std::string(argv[it]).substr(7);
+				std::string type = std::string(arg).substr(7);
 				if( type == "-lz77" )
 				{
 					launch_opt.m_archive_type = EArchiveType_LZ77;
@@ -88,20 +90,20 @@ SLaunchOptions ParseInputParams( int argc, char** argv )
 					launch_opt.m_archive_type = EArchiveType_LZ78;
 				}
 			}
-			else if( it == 5 && std::string(argv[it]).find("--rate=") == 0 )
+			else if( std::string(arg).find("--rate=") == 0 )
 			{
-				std::string rate = std::string(argv[it]).substr(7);
+				std::string rate = std::string(arg).substr(7);
 				if( rate == "-l" )
 				{
-					launch_opt.m_archive_rate = ECompressionRate_low;
+					launch_opt.m_compression_rate = ECompressionRate_low;
 				}
 				else if( rate == "-m" )
 				{
-					launch_opt.m_archive_rate = ECompressionRate_middle;
+					launch_opt.m_compression_rate = ECompressionRate_middle;
 				}
 				else if( rate == "-h" )
 				{
-					launch_opt.m_archive_rate = ECompressionRate_high;
+					launch_opt.m_compression_rate = ECompressionRate_high;
 				}
 			}
 			else
@@ -122,7 +124,7 @@ SLaunchOptions ParseInputParams( int argc, char** argv )
 		}
 		else if( launch_opt.m_archive_mode == EArchiveMode_Extract )
 		{
-			launch_opt.m_output_file = launch_opt.m_output_file.empty() ? ( launch_opt.m_input_file.substr( launch_opt.m_input_file.size() - 5 ) ) : launch_opt.m_output_file;
+			launch_opt.m_output_file = launch_opt.m_output_file.empty() ? ( launch_opt.m_input_file.substr( 0, launch_opt.m_input_file.size() - 5 ) ) : launch_opt.m_output_file;
 		}
 	}
 
