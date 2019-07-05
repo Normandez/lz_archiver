@@ -20,11 +20,11 @@ enum EArchiveType
 	EArchiveType_LZ78
 };
 
-enum EArchiveRate
+enum ECompressionRate
 {
-	EArchiveRate_low,
-	EArchiveRate_middle,
-	EArchiveRate_high
+	ECompressionRate_low,
+	ECompressionRate_middle,
+	ECompressionRate_high
 };
 
 struct SLaunchOptions
@@ -33,7 +33,7 @@ struct SLaunchOptions
 	
 	EArchiveMode m_archive_mode;
 	EArchiveType m_archive_type = EArchiveType_LZ78;
-	EArchiveRate m_archive_rate = EArchiveRate_middle;
+	ECompressionRate m_archive_rate = ECompressionRate_middle;
 
 	std::string m_input_file;
 	std::string m_output_file = "";
@@ -43,6 +43,7 @@ SLaunchOptions ParseInputParams( int argc, char** argv )
 {
 	SLaunchOptions launch_opt;
 
+	// Arguments parsing
 	if( argc < 3 )
 	{
 		std::cout << "Too few input params.\n" << s_usage_line << std::endl;
@@ -92,15 +93,15 @@ SLaunchOptions ParseInputParams( int argc, char** argv )
 				std::string rate = std::string(argv[it]).substr(7);
 				if( rate == "-l" )
 				{
-					launch_opt.m_archive_rate = EArchiveRate_low;
+					launch_opt.m_archive_rate = ECompressionRate_low;
 				}
 				else if( rate == "-m" )
 				{
-					launch_opt.m_archive_rate = EArchiveRate_middle;
+					launch_opt.m_archive_rate = ECompressionRate_middle;
 				}
 				else if( rate == "-h" )
 				{
-					launch_opt.m_archive_rate = EArchiveRate_high;
+					launch_opt.m_archive_rate = ECompressionRate_high;
 				}
 			}
 			else

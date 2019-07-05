@@ -5,7 +5,9 @@ namespace
 	// Total window size = 32KB
 	static const size_t s_search_buf_size = 20000;
 	static const size_t s_look_ahead_buf_size = 12000;
-	static const size_t s_compression_rate = 64;
+	static const size_t s_low_compression_rate = 16;
+	static const size_t s_middle_compression_rate = 32;
+	static const size_t s_high_compression_rate = 64;
 
 	// 32MB
 	static const size_t s_input_buf_size = 32768000;
@@ -32,8 +34,25 @@ bool CArchiver::SetOutputFile( const std::string& output_file_name )
 	return m_out_file_strm.is_open();
 }
 
-void CArchiver::CompressLz77()
+void CArchiver::CompressLz77( ECompressionRate rate )
 {
+	// Define compression rate
+	size_t compression_rate;
+	switch(rate)
+	{
+	case 0:
+		compression_rate = s_low_compression_rate;
+		break;
+	case 1:
+		compression_rate = s_middle_compression_rate;
+		break;
+	case 2:
+		compression_rate = s_high_compression_rate;
+		break;
+	default:
+		compression_rate = s_middle_compression_rate;
+	}
+
 	// SB, LAB and SM definition
 	std::string search_buf;
 	std::string look_ahead_buf;
@@ -42,7 +61,7 @@ void CArchiver::CompressLz77()
 	// SB, LAB and SM size setting
 	search_buf.reserve(s_search_buf_size);
 	look_ahead_buf.reserve(s_look_ahead_buf_size);
-	search_mask.reserve(s_compression_rate);
+	search_mask.reserve(compression_rate);
 
 	// Serialization components
 	CArchiver::SLz77SaveNode save_node;
@@ -68,7 +87,7 @@ void CArchiver::CompressLz77()
 			while( !look_ahead_buf.empty() )	// LAB flush
 			{
 				// SM (mask of matches) fill
-				for( size_t it = 0; it < s_compression_rate; it++ )
+				for( size_t it = 0; it < compression_rate; it++ )
 				{
 					search_substr = look_ahead_buf.substr( 0, it + 1 );
 					std::reverse( search_substr.begin(), search_substr.end() );
@@ -76,7 +95,7 @@ void CArchiver::CompressLz77()
 				}
 
 				// SM read
-				for( long it = (long) ( s_compression_rate - 1 ); it >= 0; it-- )
+				for( long it = (long) ( compression_rate - 1 ); it >= 0; it-- )
 				{
 					if( search_mask.at(it) )
 					{

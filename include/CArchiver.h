@@ -9,6 +9,8 @@
 #include <map>
 #include <list>
 
+enum ECompressionRate;
+
 class CArchiver
 {
 public:
@@ -18,7 +20,7 @@ public:
 	bool SetInputFile( const std::string& input_file_name );
 	bool SetOutputFile( const std::string& output_file_name );
 
-	void CompressLz77();
+	void CompressLz77( ECompressionRate rate );
 	void DecompressLz77();
 
 	void CompressLz78();
