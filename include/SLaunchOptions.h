@@ -63,6 +63,13 @@ SLaunchOptions ParseInputParams( int argc, char** argv )
 			else if( it == 2 )
 			{
 				launch_opt.m_input_file = argv[it];
+				if( launch_opt.m_archive_mode == EArchiveMode_Extract
+					&& launch_opt.m_input_file.compare( launch_opt.m_input_file.size() - 5, 5, s_archive_ext ) != 0 )
+				{
+					std::cout << "Input file isn't .arch-file\n" << s_usage_line << std::endl;
+					launch_opt.m_is_valid = false;
+					break;
+				}
 			}
 			else if( it == 3 && std::string(argv[it]).find("--output=") == 0 )
 			{
@@ -105,10 +112,17 @@ SLaunchOptions ParseInputParams( int argc, char** argv )
 		}
 	}
 
-	// Auto-add extension
+	// Auto add/remove extension
 	if(launch_opt.m_is_valid)
 	{
-		launch_opt.m_output_file = launch_opt.m_output_file.empty() ? ( launch_opt.m_input_file + s_archive_ext ) : launch_opt.m_output_file + s_archive_ext;
+		if( launch_opt.m_archive_mode == EArchiveMode_Compress )
+		{
+			launch_opt.m_output_file = launch_opt.m_output_file.empty() ? ( launch_opt.m_input_file + s_archive_ext ) : launch_opt.m_output_file + s_archive_ext;
+		}
+		else if( launch_opt.m_archive_mode == EArchiveMode_Extract )
+		{
+			launch_opt.m_output_file = launch_opt.m_output_file.empty() ? ( launch_opt.m_input_file.substr( launch_opt.m_input_file.size() - 5 ) ) : launch_opt.m_output_file;
+		}
 	}
 
 	return launch_opt;
