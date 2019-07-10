@@ -1,6 +1,8 @@
 #include "SLaunchOptions.h"
 #include "CArchiver.h"
 
+#include <stdlib.h>
+
 int main( int argc, char** argv )
 {
 	SLaunchOptions launch_opt = ParseInputParams( argc, argv );
@@ -26,12 +28,30 @@ int main( int argc, char** argv )
 
 		if( launch_opt.m_archive_mode == EArchiveMode_Compress )
 		{
+			
 			if( launch_opt.m_archive_type == EArchiveType_LZ77 )
 			{
+				std::cout << "Method: 'LZ77'\nCompression rate: '";
+				switch(launch_opt.m_compression_rate)
+				{
+				case 0:
+					std::cout << "low'";
+					break;
+				case 1:
+					std::cout << "middle'";
+					break;
+				case 2:
+					std::cout << "high'";
+					break;
+				}
+				std::cout << std::endl;
+
 				archiver.CompressLz77(launch_opt.m_compression_rate);
 			}
 			else if( launch_opt.m_archive_type == EArchiveType_LZ78 )
 			{
+				std::cout << "Method: 'LZ78'" << std::endl;
+
 				archiver.CompressLz78();
 			}
 		}
@@ -39,13 +59,19 @@ int main( int argc, char** argv )
 		{
 			if( launch_opt.m_archive_type == EArchiveType_LZ77 )
 			{
+				std::cout << "Method: 'LZ77'" << std::endl;
+
 				archiver.DecompressLz77();
 			}
 			else if( launch_opt.m_archive_type == EArchiveType_LZ78 )
 			{
+				std::cout << "Method: 'LZ78'" << std::endl;
+
 				archiver.DecompressLz78();
 			}
 		}
+
+		std::cout << "Done! Output file: '" << launch_opt.m_output_file << "'" << std::endl;
 	}
 
 	return 0;

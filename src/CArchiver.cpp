@@ -11,9 +11,18 @@ namespace
 
 	// 32MB
 	static const size_t s_input_buf_size = 32768000;
+
+	// CLI components
+	static const char* s_compress_progress_line = "Compressing:";
+	static const char* s_extract_progress_line = "Extracting:";
+	static const char s_progress_bar_edge_char = '|';
+	static std::string s_progress_bar_filler = ""; // 1 '#' = 2%
+	static std::string s_progress_bar_spacer = "                                                  "; // 50 spaces
 }
 
 CArchiver::CArchiver()
+	: m_in_file_length(0),
+	  m_progress_bar_step(0)
 { }
 
 CArchiver::~CArchiver()
@@ -25,7 +34,19 @@ CArchiver::~CArchiver()
 bool CArchiver::SetInputFile( const std::string& input_file_name )
 {
 	m_in_file_strm.open( input_file_name, std::ios::in | std::ios::binary );
-	return m_in_file_strm.is_open();
+	if( m_in_file_strm.is_open() )
+	{
+		// Get total file length
+		m_in_file_strm.seekg( 0, m_in_file_strm.end );
+		m_in_file_length = (float)m_in_file_strm.tellg();
+		m_in_file_strm.seekg( 0, m_in_file_strm.beg );
+
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 bool CArchiver::SetOutputFile( const std::string& output_file_name )
@@ -68,11 +89,15 @@ void CArchiver::CompressLz77( ECompressionRate rate )
 	char* serialized_node = new char[ sizeof(CArchiver::SLz77SaveNode) ];
 
 	// File compressing loop
+	UpdateProgressBar( 0.0, s_compress_progress_line );
 	bool is_eof = false;
 	while(true)
 	{
 		// EOF checking
 		is_eof = m_in_file_strm.eof();
+
+		// Progress bar update
+		UpdateProgressBar( m_in_file_strm.tellg() / m_in_file_length * 100.0, s_compress_progress_line );
 
 		if( look_ahead_buf.size() < s_look_ahead_buf_size && !is_eof )	// LAB fill
 		{
@@ -150,6 +175,9 @@ void CArchiver::CompressLz77( ECompressionRate rate )
 	}
 
 	delete[] serialized_node;
+
+	std::cout.flush();
+	std::cout << std::endl;
 }
 
 void CArchiver::DecompressLz77()
@@ -165,6 +193,7 @@ void CArchiver::DecompressLz77()
 	char* serialized_node = new char[sizeof( CArchiver::SLz77SaveNode )];
 
 	// File decompressing loop
+	UpdateProgressBar( 0.0, s_extract_progress_line );
 	while( m_in_file_strm.read( serialized_node, sizeof( CArchiver::SLz77SaveNode ) ) )
 	{
 		// Deserialization
@@ -195,6 +224,9 @@ void CArchiver::DecompressLz77()
 
 		// SB shifting
 		search_buf.insert( 0, search_substr );
+
+		// Progress bar update
+		UpdateProgressBar( m_in_file_strm.tellg() / m_in_file_length * 100.0, s_extract_progress_line );
 	}
 
 	// SB flush
@@ -202,6 +234,9 @@ void CArchiver::DecompressLz77()
 	m_out_file_strm << search_buf;
 
 	delete[] serialized_node;
+
+	std::cout.flush();
+	std::cout << std::endl;
 }
 
 void CArchiver::CompressLz78()
@@ -219,12 +254,16 @@ void CArchiver::CompressLz78()
 	char* serialized_node = new char[sizeof( CArchiver::SLz78Node )];
 
 	// File compression loop
+	UpdateProgressBar( 0.0, s_compress_progress_line );
 	bool is_eof = false;
 	std::string search_buf = "";
 	while(true)
 	{
 		// EOF checking
 		is_eof = m_in_file_strm.eof();
+
+		// Progress bar update
+		UpdateProgressBar( m_in_file_strm.tellg() / m_in_file_length * 100.0, s_compress_progress_line );
 
 		if( input_buf.size() < s_input_buf_size && !is_eof )	// IB filling
 		{
@@ -265,6 +304,9 @@ void CArchiver::CompressLz78()
 	}
 
 	delete[] serialized_node;
+
+	std::cout.flush();
+	std::cout << std::endl;
 }
 
 void CArchiver::DecompressLz78()
@@ -277,6 +319,7 @@ void CArchiver::DecompressLz78()
 	char* serialized_node = new char[sizeof(CArchiver::SLz78Node)];
 
 	// Decompression loop
+	UpdateProgressBar( 0.0, s_extract_progress_line );
 	std::string buf = "";
 	while( m_in_file_strm.read( serialized_node, sizeof( CArchiver::SLz78Node ) ) )
 	{
@@ -292,7 +335,35 @@ void CArchiver::DecompressLz78()
 		// D filling
 		dict.push_back(buf);
 		buf.clear();
+
+		// Progress bar update
+		UpdateProgressBar( m_in_file_strm.tellg() / m_in_file_length * 100.0, s_extract_progress_line );
 	}
 
 	delete[] serialized_node;
+
+	std::cout.flush();
+	std::cout << std::endl;
+}
+
+void CArchiver::UpdateProgressBar( double new_value, const std::string& process_name )
+{
+	std::cout.clear();
+	std::cout << "\r";
+	std::cout.flush();
+
+	if( new_value >= 0.0 && new_value <= 100.0 )
+	{
+		int buf_step = (int)new_value / 2;
+		if( m_progress_bar_step != buf_step )
+		{
+			s_progress_bar_spacer.resize( s_progress_bar_spacer.size() - 1 );
+			s_progress_bar_filler.resize( s_progress_bar_filler.size() + 1, '#' );
+			m_progress_bar_step = buf_step;
+		}
+
+		std::cout << process_name << " "
+					<< s_progress_bar_edge_char << s_progress_bar_filler << s_progress_bar_spacer << s_progress_bar_edge_char
+					<< std::showpoint << std::setprecision(4) << new_value << "%" << '\0';
+	}
 }

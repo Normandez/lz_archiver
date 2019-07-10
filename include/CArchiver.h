@@ -2,6 +2,7 @@
 #define CARCHIVER_H
 
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 
 #include <string>
@@ -29,6 +30,8 @@ public:
 private:
 	std::ifstream m_in_file_strm;
 	std::ofstream m_out_file_strm;
+	double m_in_file_length;
+	int m_progress_bar_step;
 
 	struct SLz77SaveNode
 	{
@@ -93,6 +96,8 @@ private:
 			this->next_ch = *char_it, char_it++;
 		}
 	};
+
+	void UpdateProgressBar( double new_value, const std::string& process_name );
 
 };
 
